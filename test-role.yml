@@ -1,0 +1,9 @@
+---
+- hosts: localhost
+  connection: local
+  vars_files:
+    - vars/common.yml
+  tasks:
+    - block:
+        - name: Test Role
+          include_role: name=test-role

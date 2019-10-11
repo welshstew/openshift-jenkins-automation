@@ -1,0 +1,13 @@
+---
+- name: Check for required role arguments
+  assert:
+    that:
+      - ocp_server is defined
+      - ocp_username is defined
+      - ocp_password is defined
+
+- block:
+    - include: setup.yml
+    - include: dosomething.yml
+  # always:
+  #   - include: cleanup.yml

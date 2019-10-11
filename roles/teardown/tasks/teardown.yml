@@ -1,0 +1,6 @@
+---
+- name: Teardown Items
+  pause: prompt='Please confirm you want to teardown! Press return to continue. Press Ctrl+c and then "a" to abort'
+
+- name: Delete projects
+  shell: 'oc delete project cicd dev release'

@@ -1,0 +1,17 @@
+---
+- block:
+  - shell: "oc get pods -l name=jenkins -o jsonpath='{.items[0].status.phase}' --config={{ kubeconfig }}"
+    register: jenkins_running
+    until: jenkins_running.stdout.find("Running") != -1
+    retries: 50
+    delay: 10
+  
+  - name: Ensure the Jenkins Pod is Ready
+    shell: "oc get pods -l name=jenkins --config={{ kubeconfig }}"
+    register: jenkins_running
+    until: jenkins_running.stdout.find("1/1") != -1
+    retries: 50
+    delay: 10
+
+  - name: Add permissions for jenkins
+    shell: "oc policy add-role-to-user admin system:serviceaccount:cicd:jenkins -n dev --config={{ kubeconfig }} && oc policy add-role-to-user admin system:serviceaccount:cicd:jenkins -n release --config={{ kubeconfig }}"

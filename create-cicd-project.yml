@@ -1,0 +1,9 @@
+---
+- hosts: localhost
+  connection: local
+  vars_files:
+    - vars/common.yml
+  tasks:
+    - block:
+        - name: Create CICD Project
+          include_role: name=create-cicd-project

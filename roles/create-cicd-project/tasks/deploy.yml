@@ -1,0 +1,64 @@
+---
+# tasks file for create-cicd-project
+- name: Create dev project
+  shell: "oc new-project dev --config={{ kubeconfig }}"
+
+- name: Create release project
+  shell: "oc new-project release --config={{ kubeconfig }}"
+
+- name: Create cicd project
+  shell: "oc new-project cicd --config={{ kubeconfig }}"
+
+- name: Create Jenkins project 
+  shell: "oc new-app --template=jenkins-persistent -n cicd --config={{ kubeconfig }}"
+
+- name: Clone containers quickstarts
+  git:
+    repo: 'https://github.com/redhat-cop/containers-quickstarts.git'
+    dest: "{{ tmpdir }}/git/containers-quickstarts"
+
+- name: Clone Sample Code
+  git:
+    repo: 'https://github.com/welshstew/e2e-pipeline-sample.git'
+    dest: "{{ tmpdir }}/git/e2e-pipeline-sample"
+
+- name: Add the Jenkins Slave
+  shell: "oc process -f {{ tmpdir }}/git/containers-quickstarts/.openshift/templates/jenkins-slave-generic-template.yml -p BUILDER_IMAGE_NAME=quay.io/openshift/origin-jenkins-agent-base:4.1 -p NAME=jenkins-slave-ansible -p SOURCE_CONTEXT_DIR=jenkins-slaves/jenkins-slave-ansible --config={{ kubeconfig }} | oc create -f - --config={{ kubeconfig }}"
+
+- name: Pause for a bit
+  pause:
+    seconds: 30
+
+- name: Wait for the build of jenkins-slave-ansible to complete
+  shell: "oc logs builds/jenkins-slave-ansible-1 -f -n cicd --config={{ kubeconfig }}"
+
+- name: Ensure the Jenkins Pod is Running
+  shell: "oc get pods -l name=jenkins -o jsonpath='{.items[0].status.phase}' --config={{ kubeconfig }}"
+  register: jenkins_running
+  until: jenkins_running.stdout.find("Running") != -1
+  retries: 50
+  delay: 10
+
+- name: Ensure the Jenkins Pod is Ready
+  shell: "oc get pods -l name=jenkins --config={{ kubeconfig }}"
+  register: jenkins_running
+  until: jenkins_running.stdout.find("1/1") != -1
+  retries: 50
+  delay: 10
+
+## ensure jenkins is rolled out 
+## if not then retry: oc rollout retry dc/jenkins
+
+- name: Add permissions for jenkins
+  shell: "oc policy add-role-to-user admin system:serviceaccount:cicd:jenkins -n dev --config={{ kubeconfig }} && oc policy add-role-to-user admin system:serviceaccount:cicd:jenkins -n release --config={{ kubeconfig }}"
+
+- name: Add the github secret to cicd
+  shell: "oc create secret generic github-secret --from-literal=username={{ github_username }} --from-literal=password={{ github_password }} -n cicd --config={{ kubeconfig }}"  
+
+- name: Add the github secret to dev
+  shell: "oc create secret generic github-secret --from-literal=username={{ github_username }} --from-literal=password={{ github_password }} -n dev --config={{ kubeconfig }}"  
+
+#Create the credential inside Jenkins
+
+- name: Create the pipeline from the code
+  shell: "oc create -f {{ tmpdir }}/git/e2e-pipeline-sample/sample-pipeline.yml --config={{ kubeconfig }}"  
