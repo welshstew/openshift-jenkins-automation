@@ -14,12 +14,12 @@
 
 - name: Clone containers quickstarts
   git:
-    repo: 'https://github.com/redhat-cop/containers-quickstarts.git'
+    repo: "{{ containers_quickstarts_git_repo }}"
     dest: "{{ tmpdir }}/git/containers-quickstarts"
 
 - name: Clone Sample Code
   git:
-    repo: 'https://github.com/welshstew/e2e-pipeline-sample.git'
+    repo: "{{ e2e_pipeline_sample_git_repo }}"
     dest: "{{ tmpdir }}/git/e2e-pipeline-sample"
 
 - name: Add the Jenkins Slave
@@ -62,3 +62,41 @@
 
 - name: Create the pipeline from the code
   shell: "oc create -f {{ tmpdir }}/git/e2e-pipeline-sample/sample-pipeline.yml --config={{ kubeconfig }}"  
+
+- name: Pause for a bit
+  pause:
+    seconds: 30
+
+- name: Get the Jenkins secret name
+  shell: "oc get sa/jenkins -o jsonpath={.secrets[0].name} -n cicd"  
+  register: jenkins_secret_stdout
+
+- name: Set Jenkins Secret Name Fact
+  set_fact: 
+    jenkins_secret_name: "{{ jenkins_secret_stdout.stdout }}"
+
+- name: Get the Jenkins secret content
+  shell: "oc get secret {{ jenkins_secret_name }} -o=jsonpath={.data.token} -n cicd | base64 -d "  
+  register: jenkins_token_stdout
+
+- name: Set Jenkins Secret Content Fact
+  set_fact: 
+    jenkins_token: "{{ jenkins_token_stdout.stdout }}"
+
+- name: Get Jenkins Route Address
+  shell: "oc get route/jenkins -o jsonpath={.spec.host} -n cicd"
+  register: jenkins_route_stdout
+
+- name: Get Jenkins Job Route Fact
+  set_fact:
+    jenkins_build_job_uri: "https://{{ jenkins_route_stdout.stdout }}/job/cicd/job/cicd-e2e-pipeline-sample/build"
+
+- name: Invoke Jenkins Pipeline Job
+  uri:
+    url: "{{ jenkins_build_job_uri }}"
+    method: POST
+    validate_certs: no
+    status_code:
+    - 302
+    headers:
+      Authorization: "Bearer {{ jenkins_token }}"

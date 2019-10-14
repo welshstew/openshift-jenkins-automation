@@ -1,12 +1,29 @@
 # openshift jenkins automation
 
-playbooks to help me bootstrap a dev environment with jenkins for fun.
+Playbooks to help me bootstrap a dev environment with jenkins for fun.  What does it do:
 
 
 - login to cluster
 - Create projects 
+- Create a persistent jenkins
 - Create https://github.com/welshstew/e2e-pipeline-sample as a sample
+- Triggers the pipeline to build and deploy the project in the dev namespace
+- Deploys the application in the release namespace
 
+What you need to do:
+
+Define a file like `extra-vars.yml` as per below:
+
+```
+ocp_server: https://api.crc.testing:6443
+ocp_username: developer
+ocp_password: developer
+github_username: AAAAA
+github_password: AAAAA
+```
+
+
+## Some Python stuff for a virtualenv
 
 ```
 sudo dnf install python2-virtualenv
@@ -16,6 +33,7 @@ virtualenv --python /usr/bin/python2.7 env27
 
 ```
 
+OR
 
 ```
 python3 -m venv env --system-site-packages
@@ -23,19 +41,13 @@ python3 -m venv env --system-site-packages
 
 ```
 
+### How to run:
+
 ```
 ansible-galaxy install -r requirements.yml
-
-
 ansible-playbook create-cicd-project.yml --extra-vars "@extra-vars.yml"
 ansible-playbook teardown.yml --extra-vars "@extra-vars.yml"
-ansible-playbook test-role.yml --extra-vars "@extra-vars.yml" -e'ansible_python_interpreter=/usr/bin/python3'
-
-
-
-INFO Then you can access it by running 'oc login -u developer -p developer https://api.crc.testing:6443' 
-INFO To login as an admin, username is 'kubeadmin' and password is F44En-Xau6V-jQuyb-yuMXB 
-
+ansible-playbook test-role.yml --extra-vars "@extra-vars.yml" 
 
 ```
 

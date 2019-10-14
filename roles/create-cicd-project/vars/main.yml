@@ -1,2 +1,4 @@
 ---
 # vars file for create-cicd-project
+containers_quickstarts_git_repo: https://github.com/redhat-cop/containers-quickstarts.git
+e2e_pipeline_sample_git_repo: https://github.com/welshstew/e2e-pipeline-sample.git
